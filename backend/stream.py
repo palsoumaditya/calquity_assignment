@@ -1,32 +1,31 @@
 import asyncio
 import json
-from sse_starlette.sse import EventSourceResponse
-from typing import AsyncGenerator, Dict
+from fastapi import APIRouter
+from fastapi.responses import StreamingResponse
 
+router = APIRouter()
 
-async def fake_ai_stream() -> AsyncGenerator[Dict, None]:
-    steps = [
-        {"type": "tool", "content": "🔍 Searching documents..."},
-        {"type": "tool", "content": "📄 Reading PDF sources..."},
-        {"type": "text", "content": "AI search systems use streaming responses "},
-        {"type": "text", "content": "to reduce perceived latency and improve UX "},
-        {"type": "text", "content": "by sending partial outputs early. [1]"},
-        {"type": "tool", "content": "🧠 Analyzing extracted content..."},
-        {"type": "text", "content": "This approach is widely used in products like Perplexity."},
-        {"type": "done"},
-    ]
+async def event_generator():
+    # Tool event
+    yield f"data: {json.dumps({'type': 'tool', 'name': 'searching_documents'})}\n\n"
+    await asyncio.sleep(1)
 
-    for step in steps:
-        yield step
-        await asyncio.sleep(0.7)
+    # Tool event
+    yield f"data: {json.dumps({'type': 'tool', 'name': 'reading_pdf'})}\n\n"
+    await asyncio.sleep(1)
 
+    # Text streaming (character by character)
+    text = "This answer is based on the uploaded document."
+    for char in text:
+        yield f"data: {json.dumps({'type': 'text', 'content': char})}\n\n"
+        await asyncio.sleep(0.05)
 
-def stream_chat():
-    async def event_generator():
-        async for chunk in fake_ai_stream():
-            yield {
-                "event": "message",
-                "data": json.dumps(chunk),
-            }
+    # Citation event
+    yield f"data: {json.dumps({'type': 'citation', 'page': 2})}\n\n"
 
-    return EventSourceResponse(event_generator())
+@router.get("/stream/{job_id}")
+async def stream(job_id: str):
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream"
+    )
