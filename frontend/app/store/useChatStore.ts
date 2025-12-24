@@ -5,12 +5,13 @@ export type Citation = {
   snippet: string;
 };
 
+// ✅ FIX: 'components' must be an array []
 export type Message = {
   role: "assistant" | "user";
   content: string;
   tools: string[];
   citations: Citation[];
-  components: { name: string; data: any }[]; // Changed to array to support multiple components
+  components: { name: string; data: any }[]; 
 };
 
 type ChatState = {
@@ -70,7 +71,6 @@ export const useChatStore = create<ChatState>((set) => ({
       const messages = [...state.messages];
       const lastMsg = messages[messages.length - 1];
       if (lastMsg) {
-          // Avoid duplicates
           const exists = lastMsg.citations.some((c) => c.page === page);
           if (!exists) {
              lastMsg.citations.push({ page, snippet });
@@ -79,12 +79,17 @@ export const useChatStore = create<ChatState>((set) => ({
       return { messages };
     }),
 
+  // ✅ FIX: Properly create new message object with immutable update
   addComponent: (component) =>
     set((state) => {
       const messages = [...state.messages];
       const lastMsg = messages[messages.length - 1];
       if (lastMsg) {
-        lastMsg.components.push(component);
+        // Create a new message object with updated components array
+        messages[messages.length - 1] = {
+          ...lastMsg,
+          components: [...(lastMsg.components || []), component],
+        };
       }
       return { messages };
     }),

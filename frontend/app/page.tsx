@@ -102,22 +102,29 @@ export default function Home() {
       const es = new EventSource(`http://127.0.0.1:8000/stream/${job_id}`);
 
       es.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+        try {
+          const data = JSON.parse(event.data);
 
-        if (data.type === "tool") addTool(data.name);
-        if (data.type === "text") appendText(data.content);
-        if (data.type === "citation") addCitation(data.page, data.snippet);
-        if (data.type === "component")
-          addComponent({ name: data.name, data: data.data });
+          if (data.type === "tool") addTool(data.name);
+          if (data.type === "text") appendText(data.content);
+          if (data.type === "citation") addCitation(data.page, data.snippet);
+          if (data.type === "component") {
+            console.log("Received component:", data);
+            addComponent({ name: data.name, data: data.data });
+          }
 
-        if (data.type === "error") {
-          console.error(data.content);
-          es.close();
-          setStreaming(false);
+          if (data.type === "error") {
+            console.error(data.content);
+            es.close();
+            setStreaming(false);
+          }
+        } catch (error) {
+          console.error("Error parsing event data:", error, event.data);
         }
       };
 
       es.onerror = () => {
+        console.log("EventSource error or stream ended");
         es.close();
         setStreaming(false);
       };
@@ -275,10 +282,11 @@ export default function Home() {
                           )}
 
                           {/* 2. Generative UI Components */}
-                          {m.components &&
-                            m.components.map((comp, idx) => {
+                          {m.components && m.components.length > 0 && (
+                            <>
+                              {m.components.map((comp, idx) => {
                               // A. INFO CARD
-                              if (comp.name === "info_card") {
+                              if (comp.name === "info_card" && comp.data) {
                                 return (
                                   <div
                                     key={idx}
@@ -292,30 +300,32 @@ export default function Home() {
                                     </div>
                                     <div className="p-4">
                                       <h4 className="font-serif text-lg text-neutral-900 mb-2">
-                                        {comp.data.title}
+                                        {comp.data.title || "Document Analysis"}
                                       </h4>
-                                      <ul className="space-y-2">
-                                        {comp.data.details.map(
-                                          (item: string, i: number) => (
-                                            <li
-                                              key={i}
-                                              className="flex gap-2 text-sm text-neutral-600 leading-relaxed"
-                                            >
-                                              <span className="text-teal-500 font-bold">
-                                                •
-                                              </span>
-                                              {item}
-                                            </li>
-                                          )
-                                        )}
-                                      </ul>
+                                      {comp.data.details && Array.isArray(comp.data.details) && (
+                                        <ul className="space-y-2">
+                                          {comp.data.details.map(
+                                            (item: string, i: number) => (
+                                              <li
+                                                key={i}
+                                                className="flex gap-2 text-sm text-neutral-600 leading-relaxed"
+                                              >
+                                                <span className="text-teal-500 font-bold">
+                                                  •
+                                                </span>
+                                                {item}
+                                              </li>
+                                            )
+                                          )}
+                                        </ul>
+                                      )}
                                     </div>
                                   </div>
                                 );
                               }
 
                               // B. DATA TABLE
-                              if (comp.name === "data_table") {
+                              if (comp.name === "data_table" && comp.data) {
                                 return (
                                   <div
                                     key={idx}
@@ -323,93 +333,99 @@ export default function Home() {
                                   >
                                     <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50">
                                       <h3 className="font-semibold text-sm text-neutral-700">
-                                        {comp.data.title}
+                                        {comp.data.title || "Data Table"}
                                       </h3>
                                     </div>
-                                    <div className="overflow-x-auto">
-                                      <table className="w-full text-sm text-left">
-                                        <thead className="text-xs text-neutral-500 uppercase bg-neutral-50 border-b">
-                                          <tr>
-                                            {comp.data.headers.map(
-                                              (h: string, i: number) => (
-                                                <th
+                                    {comp.data.headers && comp.data.rows && (
+                                      <div className="overflow-x-auto">
+                                        <table className="w-full text-sm text-left">
+                                          <thead className="text-xs text-neutral-500 uppercase bg-neutral-50 border-b">
+                                            <tr>
+                                              {comp.data.headers.map(
+                                                (h: string, i: number) => (
+                                                  <th
+                                                    key={i}
+                                                    className="px-4 py-2 font-medium"
+                                                  >
+                                                    {h}
+                                                  </th>
+                                                )
+                                              )}
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {comp.data.rows.map(
+                                              (row: string[], i: number) => (
+                                                <tr
                                                   key={i}
-                                                  className="px-4 py-2 font-medium"
+                                                  className="border-b last:border-0 hover:bg-neutral-50"
                                                 >
-                                                  {h}
-                                                </th>
+                                                  {row.map(
+                                                    (cell: string, j: number) => (
+                                                      <td
+                                                        key={j}
+                                                        className="px-4 py-2 text-neutral-700"
+                                                      >
+                                                        {cell}
+                                                      </td>
+                                                    )
+                                                  )}
+                                                </tr>
                                               )
                                             )}
-                                          </tr>
-                                        </thead>
-                                        <tbody>
-                                          {comp.data.rows.map(
-                                            (row: string[], i: number) => (
-                                              <tr
-                                                key={i}
-                                                className="border-b last:border-0 hover:bg-neutral-50"
-                                              >
-                                                {row.map(
-                                                  (cell: string, j: number) => (
-                                                    <td
-                                                      key={j}
-                                                      className="px-4 py-2 text-neutral-700"
-                                                    >
-                                                      {cell}
-                                                    </td>
-                                                  )
-                                                )}
-                                              </tr>
-                                            )
-                                          )}
-                                        </tbody>
-                                      </table>
-                                    </div>
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    )}
                                   </div>
                                 );
                               }
 
                               // C. RISK CHART
-                              if (comp.name === "risk_chart") {
+                              if (comp.name === "risk_chart" && comp.data) {
                                 return (
                                   <div
                                     key={idx}
                                     className="my-4 rounded-xl border border-neutral-200 bg-white p-4 max-w-md shadow-sm"
                                   >
                                     <h3 className="font-medium text-sm text-neutral-500 mb-3 uppercase tracking-wider">
-                                      {comp.data.title}
+                                      {comp.data.title || "Chart"}
                                     </h3>
-                                    <div className="space-y-3">
-                                      {comp.data.labels.map(
-                                        (label: string, i: number) => (
-                                          <div
-                                            key={i}
-                                            className="flex items-center gap-3"
-                                          >
-                                            <div className="w-24 text-xs font-medium text-neutral-600 truncate">
-                                              {label}
+                                    {comp.data.labels && comp.data.values && (
+                                      <div className="space-y-3">
+                                        {comp.data.labels.map(
+                                          (label: string, i: number) => (
+                                            <div
+                                              key={i}
+                                              className="flex items-center gap-3"
+                                            >
+                                              <div className="w-24 text-xs font-medium text-neutral-600 truncate">
+                                                {label}
+                                              </div>
+                                              <div className="flex-1 h-2 bg-neutral-100 rounded-full overflow-hidden">
+                                                <div
+                                                  className="h-full bg-teal-500 rounded-full"
+                                                  style={{
+                                                    width: `${comp.data.values[i] || 0}%`,
+                                                  }}
+                                                />
+                                              </div>
+                                              <div className="w-8 text-xs text-neutral-400 text-right">
+                                                {comp.data.values[i] || 0}%
+                                              </div>
                                             </div>
-                                            <div className="flex-1 h-2 bg-neutral-100 rounded-full overflow-hidden">
-                                              <div
-                                                className="h-full bg-teal-500 rounded-full"
-                                                style={{
-                                                  width: `${comp.data.values[i]}%`,
-                                                }}
-                                              />
-                                            </div>
-                                            <div className="w-8 text-xs text-neutral-400 text-right">
-                                              {comp.data.values[i]}%
-                                            </div>
-                                          </div>
-                                        )
-                                      )}
-                                    </div>
+                                          )
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
                                 );
                               }
 
                               return null;
                             })}
+                            </>
+                          )}
 
                           {/* 3. Main Text Content */}
                           <div className="prose prose-lg prose-neutral max-w-none text-neutral-800 font-serif leading-8">

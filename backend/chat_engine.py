@@ -123,47 +123,126 @@ async def chat_generator(query: str, job_id: str):
         yield {"type": "tool", "name": "analyzing_content"}
         await asyncio.sleep(0.5)
 
-        # 3. GENERATIVE UI: Info Card
-        yield {
-            "type": "component",
-            "name": "info_card",
-            "data": {
-                "title": "Document Analysis",
-                "details": [
-                    f"Scanned {len(pdf_content)} pages",
-                    f"Identified {len(context_pages)} relevant sections",
-                    "Synthesizing response based on context..."
-                ]
-            }
-        }
+        # 3. Ask AI to generate components based on the content
+        import json
+        import re
         
-        # 4. GENERATIVE UI: Data Table
-        await asyncio.sleep(0.2)
-        yield {
-            "type": "component",
-            "name": "data_table",
-            "data": {
-                "title": "Context Relevance Analysis",
-                "headers": ["Metric", "Value", "Status"],
-                "rows": [
-                    ["Match Score", f"{random.randint(85, 99)}%", "Good"],
-                    ["Page Count", str(len(context_pages)), " OK"],
-                    ["Data Confidence", "High", " Good"]
-                ]
-            }
-        }
+        component_prompt = f"""Analyze the following document context and user query, then generate structured UI components in JSON format.
 
-        # 5. GENERATIVE UI: Risk Chart (The Polish/Bonus Feature)
-        await asyncio.sleep(0.2)
-        yield {
-            "type": "component",
-            "name": "risk_chart",
-            "data": {
-                "title": "Relevance Score",
-                "labels": ["Legal", "Financial", "Technical", "General"],
-                "values": [random.randint(20, 90) for _ in range(4)]
+Context:
+{context_text[:4000]}
+
+User Query: {query}
+
+Based on the content, generate appropriate UI components. Return ONLY a valid JSON object with this structure:
+{{
+  "info_card": {{
+    "title": "Summary title based on content",
+    "details": ["key insight 1", "key insight 2", "key insight 3"]
+  }},
+  "data_table": {{
+    "title": "Relevant data extracted from document",
+    "headers": ["Column1", "Column2", "Column3"],
+    "rows": [
+      ["data1", "data2", "data3"]
+    ]
+  }},
+  "risk_chart": {{
+    "title": "Chart showing relevant metrics",
+    "labels": ["Category1", "Category2", "Category3"],
+    "values": [percentage1, percentage2, percentage3]
+  }}
+}}
+
+Guidelines:
+- For risk-related queries: Focus on risk_chart with actual risk categories and percentages from the document
+- For financial queries: Create data_table with financial metrics
+- For summary queries: Create info_card with key points
+- Extract REAL data from the document, don't make up numbers
+- Return ONLY valid JSON, no markdown, no explanations"""
+
+        components_sent = False
+        
+        try:
+            # Generate components using AI
+            component_response = await model.generate_content_async(component_prompt)
+            component_text = component_response.text.strip()
+            
+            # Clean up the response - remove markdown code blocks
+            component_text = re.sub(r'^```json\s*', '', component_text)
+            component_text = re.sub(r'^```\s*', '', component_text)
+            component_text = re.sub(r'```\s*$', '', component_text)
+            component_text = component_text.strip()
+            
+            # Try to extract JSON if wrapped in other text
+            json_match = re.search(r'\{.*\}', component_text, re.DOTALL)
+            if json_match:
+                component_text = json_match.group(0)
+            
+            components_data = json.loads(component_text)
+            
+            # Send Info Card if available and has valid data
+            if "info_card" in components_data and components_data["info_card"]:
+                info_data = components_data["info_card"]
+                if isinstance(info_data, dict) and "title" in info_data and "details" in info_data:
+                    yield {
+                        "type": "component",
+                        "name": "info_card",
+                        "data": info_data
+                    }
+                    components_sent = True
+                    await asyncio.sleep(0.2)
+            
+            # Send Data Table if available and has valid data
+            if "data_table" in components_data and components_data["data_table"]:
+                table_data = components_data["data_table"]
+                if isinstance(table_data, dict) and "headers" in table_data and "rows" in table_data:
+                    yield {
+                        "type": "component",
+                        "name": "data_table",
+                        "data": table_data
+                    }
+                    components_sent = True
+                    await asyncio.sleep(0.2)
+            
+            # Send Risk Chart if available and has valid data
+            if "risk_chart" in components_data and components_data["risk_chart"]:
+                chart_data = components_data["risk_chart"]
+                if isinstance(chart_data, dict) and "labels" in chart_data and "values" in chart_data:
+                    # Ensure values are numbers
+                    if isinstance(chart_data["values"], list):
+                        chart_data["values"] = [int(v) if isinstance(v, (int, float)) else 0 for v in chart_data["values"]]
+                    yield {
+                        "type": "component",
+                        "name": "risk_chart",
+                        "data": chart_data
+                    }
+                    components_sent = True
+                    await asyncio.sleep(0.2)
+                    
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing error for components: {e}")
+            if 'component_text' in locals():
+                print(f"Response was: {component_text[:500]}")
+        except Exception as e:
+            print(f"Error generating components: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        # Send fallback info card only if no components were successfully sent
+        if not components_sent:
+            yield {
+                "type": "component",
+                "name": "info_card",
+                "data": {
+                    "title": "Document Analysis",
+                    "details": [
+                        f"Scanned {len(pdf_content)} pages",
+                        f"Identified {len(context_pages)} relevant sections",
+                        "Analyzing content and generating insights..."
+                    ]
+                }
             }
-        }
 
         prompt = f"""You are a helpful AI assistant. Answer based ONLY on the context below.
         Cite pages like [1] where possible.
