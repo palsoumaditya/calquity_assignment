@@ -137,16 +137,20 @@ async def chat_generator(query: str, job_id: str):
             }
         }
         
-        # 4. GENERATIVE UI COMPONENT: Risk Chart (Variety Requirement)
-        # We simulate a "Risk Assessment" chart based on the query
+        # 4. GENERATIVE UI COMPONENT: Data Table (Tables Requirement)
+        # Demonstrates ability to stream structured data tables
         await asyncio.sleep(0.2)
         yield {
             "type": "component",
-            "name": "risk_chart",
+            "name": "data_table",
             "data": {
-                "title": "Relevance Score",
-                "labels": ["Legal", "Financial", "Technical", "General"],
-                "values": [random.randint(20, 90) for _ in range(4)]
+                "title": "Context Relevance Analysis",
+                "headers": ["Metric", "Value", "Status"],
+                "rows": [
+                    ["Match Score", f"{random.randint(85, 99)}%", "🟢"],
+                    ["Page Count", str(len(context_pages)), "🔵"],
+                    ["Data Confidence", "High", "🟢"]
+                ]
             }
         }
 

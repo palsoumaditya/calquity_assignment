@@ -36,7 +36,7 @@ export default function Home() {
     setStreaming,
   } = useChatStore();
 
-  const { openPdf, setSearchText } = usePdfStore(); // Destructure setSearchText
+  const { openPdf, setSearchText } = usePdfStore(); 
   const hasMessages = messages.length > 0;
 
   // --- Upload State ---
@@ -106,7 +106,6 @@ export default function Home() {
 
         if (data.type === "tool") addTool(data.name);
         if (data.type === "text") appendText(data.content);
-        // Pass snippet to store
         if (data.type === "citation") addCitation(data.page, data.snippet); 
         if (data.type === "component") addComponent({ name: data.name, data: data.data });
         
@@ -278,7 +277,34 @@ export default function Home() {
                                             );
                                         }
 
-                                        // B. RISK CHART (NEW for Variety)
+                                        // B. DATA TABLE (NEW Requirement)
+                                        if (comp.name === "data_table") {
+                                            return (
+                                                <div key={idx} className="my-4 rounded-xl border border-neutral-200 bg-white overflow-hidden shadow-sm max-w-md">
+                                                   <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-50">
+                                                      <h3 className="font-semibold text-sm text-neutral-700">{comp.data.title}</h3>
+                                                   </div>
+                                                   <div className="overflow-x-auto">
+                                                       <table className="w-full text-sm text-left">
+                                                          <thead className="text-xs text-neutral-500 uppercase bg-neutral-50 border-b">
+                                                             <tr>
+                                                                {comp.data.headers.map((h:string, i:number) => <th key={i} className="px-4 py-2 font-medium">{h}</th>)}
+                                                             </tr>
+                                                          </thead>
+                                                          <tbody>
+                                                             {comp.data.rows.map((row:string[], i:number) => (
+                                                                <tr key={i} className="border-b last:border-0 hover:bg-neutral-50">
+                                                                   {row.map((cell:string, j:number) => <td key={j} className="px-4 py-2 text-neutral-700">{cell}</td>)}
+                                                                </tr>
+                                                             ))}
+                                                          </tbody>
+                                                       </table>
+                                                   </div>
+                                                </div>
+                                            );
+                                        }
+
+                                        // C. RISK CHART
                                         if (comp.name === "risk_chart") {
                                             return (
                                                 <div key={idx} className="my-4 rounded-xl border border-neutral-200 bg-white p-4 max-w-md shadow-sm">
@@ -323,22 +349,30 @@ export default function Home() {
                                         </ReactMarkdown>
                                     </div>
 
-                                    {/* 4. Citations */}
+                                    {/* 4. SOURCE CARDS (Updated from Buttons to Cards) */}
                                     {m.citations.length > 0 && (
-                                        <div className="flex flex-wrap gap-2 pt-2">
-                                            {m.citations.map((cite, idx) => (
-                                                <button
-                                                    key={idx}
-                                                    onClick={() => {
-                                                        setSearchText(cite.snippet); // <--- Sets text to highlight
-                                                        openPdf(cite.page);          // <--- Opens PDF
-                                                    }}
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-50 border border-neutral-200 text-xs font-medium text-neutral-600 hover:border-teal-200 hover:text-teal-700 hover:bg-teal-50 transition-all"
-                                                >
-                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                                    <span>Page {cite.page}</span>
-                                                </button>
-                                            ))}
+                                        <div className="mt-4 pt-4 border-t border-neutral-100">
+                                            <h4 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">Sources</h4>
+                                            <div className="flex flex-wrap gap-3">
+                                                {m.citations.map((cite, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => {
+                                                            setSearchText(cite.snippet); 
+                                                            openPdf(cite.page);          
+                                                        }}
+                                                        className="group flex flex-col items-start gap-1 p-3 rounded-lg border border-neutral-200 bg-white hover:border-teal-500 hover:shadow-md transition-all w-48 text-left"
+                                                    >
+                                                        <div className="flex items-center gap-2 text-xs font-medium text-neutral-500 group-hover:text-teal-600">
+                                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                             <span>Page {cite.page}</span>
+                                                        </div>
+                                                        <div className="text-[10px] text-neutral-400 line-clamp-2 leading-tight w-full">
+                                                            {cite.snippet}
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
