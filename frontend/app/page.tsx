@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react'; // <--- ADDED useState
+import React, { useRef, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Playfair_Display, Inter } from 'next/font/google';
 import ReactMarkdown from 'react-markdown';
@@ -41,6 +41,7 @@ export default function Home() {
 
   // --- NEW: Upload State ---
   const [isUploading, setIsUploading] = useState(false);
+  const [isFileUploaded, setIsFileUploaded] = useState(false); // Track upload status
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // --- NEW: Handle File Upload ---
@@ -59,7 +60,8 @@ export default function Home() {
       });
 
       if (res.ok) {
-        alert("✅ PDF Uploaded & Processed Successfully!");
+        // alert("✅ PDF Uploaded & Processed Successfully!"); // Optional: removed alert for smoother flow
+        setIsFileUploaded(true); // Switch to chat mode
       } else {
         alert("❌ Upload failed.");
       }
@@ -142,56 +144,64 @@ export default function Home() {
                   What do you want to know?
                 </h1>
                 
-                {/* --- NEW: Upload Section --- */}
-                <div className="flex flex-col items-center gap-4">
-                  <p className="text-neutral-500 text-lg max-w-lg mx-auto leading-relaxed">
-                    Upload a PDF to analyze contracts, research papers, or financial reports instantly.
-                  </p>
+                {/* --- UPLOAD SECTION (Visible only BEFORE upload) --- */}
+                {!isFileUploaded && (
+                  <div className="flex flex-col items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <p className="text-neutral-500 text-lg max-w-lg mx-auto leading-relaxed">
+                      Upload a PDF to analyze contracts, research papers, or financial reports instantly.
+                    </p>
 
-                  <input 
-                    type="file" 
-                    accept=".pdf"
-                    ref={fileInputRef}
-                    className="hidden"
-                    onChange={handleFileUpload}
-                  />
-
-                  <button 
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white rounded-full font-medium hover:bg-neutral-800 transition-all disabled:opacity-50 shadow-md hover:shadow-lg transform active:scale-95"
-                  >
-                    {isUploading ? (
-                      <span className="flex items-center gap-2">
-                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                        Uploading...
-                      </span>
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                        <span>Upload PDF</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <div className="w-full pt-4">
-                    <ChatInput 
-                        onSend={handleSend} 
-                        disabled={isStreaming} 
-                        placeholder="Ask anything about the document..." 
-                        autoFocus={true}
+                    <input 
+                      type="file" 
+                      accept=".pdf"
+                      ref={fileInputRef}
+                      className="hidden"
+                      onChange={handleFileUpload}
                     />
-                </div>
-                
-                {/* Suggestions */}
-                <div className="flex flex-wrap justify-center gap-3 pt-4 opacity-60">
-                    {["Summarize the key points", "What are the risks?", "Explain the methodology"].map((s) => (
-                        <button key={s} onClick={() => handleSend(s)} className="text-sm px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 rounded-full transition-colors text-neutral-600">
-                            {s}
-                        </button>
-                    ))}
-                </div>
+
+                    <button 
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white rounded-full font-medium hover:bg-neutral-800 transition-all disabled:opacity-50 shadow-md hover:shadow-lg transform active:scale-95"
+                    >
+                      {isUploading ? (
+                        <span className="flex items-center gap-2">
+                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                          Uploading...
+                        </span>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                          <span>Upload PDF</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* --- CHAT INPUT & SUGGESTIONS (Visible only AFTER upload) --- */}
+                {isFileUploaded && (
+                  <>
+                    <div className="w-full pt-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                        <ChatInput 
+                            onSend={handleSend} 
+                            disabled={isStreaming} 
+                            placeholder="Ask anything about the document..." 
+                            autoFocus={true}
+                        />
+                    </div>
+                    
+                    {/* Suggestions */}
+                    <div className="flex flex-wrap justify-center gap-3 pt-4 opacity-60 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+                        {["Summarize the key points", "What are the risks?", "Explain the methodology"].map((s) => (
+                            <button key={s} onClick={() => handleSend(s)} className="text-sm px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 rounded-full transition-colors text-neutral-600">
+                                {s}
+                            </button>
+                        ))}
+                    </div>
+                  </>
+                )}
+
              </div>
            </div>
         )}
