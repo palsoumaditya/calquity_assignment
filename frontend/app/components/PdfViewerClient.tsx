@@ -2,7 +2,7 @@
 
 import { Document, Page, pdfjs } from "react-pdf";
 import { usePdfStore } from "../store/usePdfStore";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -13,13 +13,11 @@ import "react-pdf/dist/Page/TextLayer.css";
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 export default function PdfViewerClient() {
-  const { isOpen, page, closePdf, setPage } = usePdfStore();
+  const { isOpen, page, closePdf, setPage, searchText } = usePdfStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [scale, setScale] = useState<number>(1.0);
   const [containerWidth, setContainerWidth] = useState<number>(500);
-
-  // ... (keep the rest of your code exactly the same) ...
 
   // Reset scroll when page changes
   useEffect(() => {
@@ -52,6 +50,15 @@ export default function PdfViewerClient() {
       setPage(newPage);
     }
   };
+
+  // --- HIGHLIGHTING LOGIC ---
+  const textRenderer = useCallback((textItem: any) => {
+    if (!searchText) return textItem.str;
+    
+    return textItem.str.includes(searchText) 
+      ? `<mark>${textItem.str}</mark>` 
+      : textItem.str;
+  }, [searchText]);
 
   return (
     <AnimatePresence>
@@ -112,6 +119,7 @@ export default function PdfViewerClient() {
                 pageNumber={page}
                 renderTextLayer={true}
                 renderAnnotationLayer={true}
+                customTextRenderer={textRenderer}
                 width={containerWidth}
                 scale={scale}
                 className="bg-white"

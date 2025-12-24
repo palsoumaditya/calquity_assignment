@@ -128,9 +128,11 @@ async def chat_generator(query: str, job_id: str):
             if chunk.text:
                 yield {"type": "text", "content": chunk.text}
 
-        # 5. Citations
+        # 5. Citations with Snippets
         for page in context_pages[:3]:
-            yield {"type": "citation", "page": page['page']}
+            # Generate a snippet (first 20 words) to help with highlighting/context
+            snippet = " ".join(page['text'].split()[:20])
+            yield {"type": "citation", "page": page['page'], "snippet": snippet}
 
     except Exception as e:
         print(f"Gemini Error: {e}")

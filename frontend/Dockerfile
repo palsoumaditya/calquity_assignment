@@ -1,22 +1,20 @@
 # frontend/Dockerfile
-FROM node:18-alpine
+
+# 1. Use Node 20 (Required for Next.js 14/15)
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files
+# 2. Install dependencies
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
 
-# Copy the rest of the app
+# 3. Copy source code
 COPY . .
 
-# Build the Next.js app
+# 4. Build the app
 RUN npm run build
 
-# Expose the port
+# 5. Start the app
 EXPOSE 3000
-
-# Start the app
 CMD ["npm", "start"]
