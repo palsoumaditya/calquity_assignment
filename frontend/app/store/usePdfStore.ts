@@ -5,6 +5,7 @@ type PdfState = {
   page: number;
   openPdf: (page: number) => void;
   closePdf: () => void;
+  setPage: (page: number) => void; // <--- ADD THIS
 };
 
 export const usePdfStore = create<PdfState>((set) => ({
@@ -22,4 +23,7 @@ export const usePdfStore = create<PdfState>((set) => ({
       isOpen: false,
       page: 1,
     }),
+
+  // <--- ADD THIS FUNCTION
+  setPage: (page) => set({ page }), 
 }));

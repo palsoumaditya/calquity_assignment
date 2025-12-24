@@ -2,24 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-rgb: 255, 255, 255;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+  /* Ensure the background is solid white/gray, no gradients */
+}
+
 @layer utilities {
-  /* Subtle dot grid for a "technical/paper" feel */
-  .bg-dot-pattern {
-    background-image: radial-gradient(#d4d4d4 1px, transparent 1px);
-    background-size: 24px 24px;
-  }
-  
-  /* Hide scrollbar for clean UI but allow scrolling */
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  .text-balance {
+    text-wrap: balance;
   }
 }
 
-/* Smooth scrolling for the whole app */
-html {
-  scroll-behavior: smooth;
+/* Custom scrollbar for a cleaner feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d4d4d4;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a3a3a3;
 }
