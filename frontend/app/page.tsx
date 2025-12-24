@@ -36,15 +36,15 @@ export default function Home() {
     setStreaming,
   } = useChatStore();
 
-  const { openPdf } = usePdfStore();
+  const { openPdf, setSearchText } = usePdfStore(); // Destructure setSearchText
   const hasMessages = messages.length > 0;
 
-  // --- NEW: Upload State ---
+  // --- Upload State ---
   const [isUploading, setIsUploading] = useState(false);
-  const [isFileUploaded, setIsFileUploaded] = useState(false); // Track upload status
+  const [isFileUploaded, setIsFileUploaded] = useState(false); 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // --- NEW: Handle File Upload ---
+  // --- Handle File Upload ---
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -60,8 +60,7 @@ export default function Home() {
       });
 
       if (res.ok) {
-        // alert("✅ PDF Uploaded & Processed Successfully!"); // Optional: removed alert for smoother flow
-        setIsFileUploaded(true); // Switch to chat mode
+        setIsFileUploaded(true); 
       } else {
         alert("❌ Upload failed.");
       }
@@ -70,7 +69,6 @@ export default function Home() {
       alert("Error uploading file.");
     } finally {
       setIsUploading(false);
-      // Reset input so same file can be selected again if needed
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
@@ -108,7 +106,8 @@ export default function Home() {
 
         if (data.type === "tool") addTool(data.name);
         if (data.type === "text") appendText(data.content);
-        if (data.type === "citation") addCitation(data.page);
+        // Pass snippet to store
+        if (data.type === "citation") addCitation(data.page, data.snippet); 
         if (data.type === "component") addComponent({ name: data.name, data: data.data });
         
         if (data.type === "error") {
@@ -144,7 +143,7 @@ export default function Home() {
                   What do you want to know?
                 </h1>
                 
-                {/* --- UPLOAD SECTION (Visible only BEFORE upload) --- */}
+                {/* --- UPLOAD SECTION --- */}
                 {!isFileUploaded && (
                   <div className="flex flex-col items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <p className="text-neutral-500 text-lg max-w-lg mx-auto leading-relaxed">
@@ -179,7 +178,7 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* --- CHAT INPUT & SUGGESTIONS (Visible only AFTER upload) --- */}
+                {/* --- CHAT INPUT & SUGGESTIONS --- */}
                 {isFileUploaded && (
                   <>
                     <div className="w-full pt-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
@@ -253,26 +252,57 @@ export default function Home() {
                                         </div>
                                     )}
 
-                                    {/* 2. Generative UI Component (Card) */}
-                                    {m.component && m.component.name === "info_card" && (
-                                        <div className="my-4 rounded-xl border border-neutral-200 bg-neutral-50/50 overflow-hidden max-w-md shadow-sm">
-                                            <div className="px-4 py-3 border-b border-neutral-100 bg-white flex items-center gap-2">
-                                                <div className="w-1 h-4 bg-teal-500 rounded-full" />
-                                                <h3 className="font-semibold text-neutral-800 text-sm">Analysis Summary</h3>
-                                            </div>
-                                            <div className="p-4">
-                                                <h4 className="font-serif text-lg text-neutral-900 mb-2">{m.component.data.title}</h4>
-                                                <ul className="space-y-2">
-                                                    {m.component.data.details.map((item: string, idx: number) => (
-                                                        <li key={idx} className="flex gap-2 text-sm text-neutral-600 leading-relaxed">
-                                                            <span className="text-teal-500 font-bold">•</span>
-                                                            {item}
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    )}
+                                    {/* 2. Generative UI Components */}
+                                    {m.components && m.components.map((comp, idx) => {
+                                        
+                                        // A. INFO CARD
+                                        if (comp.name === "info_card") {
+                                            return (
+                                                <div key={idx} className="my-4 rounded-xl border border-neutral-200 bg-neutral-50/50 overflow-hidden max-w-md shadow-sm">
+                                                    <div className="px-4 py-3 border-b border-neutral-100 bg-white flex items-center gap-2">
+                                                        <div className="w-1 h-4 bg-teal-500 rounded-full" />
+                                                        <h3 className="font-semibold text-neutral-800 text-sm">Analysis Summary</h3>
+                                                    </div>
+                                                    <div className="p-4">
+                                                        <h4 className="font-serif text-lg text-neutral-900 mb-2">{comp.data.title}</h4>
+                                                        <ul className="space-y-2">
+                                                            {comp.data.details.map((item: string, i: number) => (
+                                                                <li key={i} className="flex gap-2 text-sm text-neutral-600 leading-relaxed">
+                                                                    <span className="text-teal-500 font-bold">•</span>
+                                                                    {item}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+
+                                        // B. RISK CHART (NEW for Variety)
+                                        if (comp.name === "risk_chart") {
+                                            return (
+                                                <div key={idx} className="my-4 rounded-xl border border-neutral-200 bg-white p-4 max-w-md shadow-sm">
+                                                    <h3 className="font-medium text-sm text-neutral-500 mb-3 uppercase tracking-wider">{comp.data.title}</h3>
+                                                    <div className="space-y-3">
+                                                        {comp.data.labels.map((label: string, i: number) => (
+                                                            <div key={i} className="flex items-center gap-3">
+                                                                <div className="w-24 text-xs font-medium text-neutral-600 truncate">{label}</div>
+                                                                <div className="flex-1 h-2 bg-neutral-100 rounded-full overflow-hidden">
+                                                                    <div 
+                                                                        className="h-full bg-teal-500 rounded-full" 
+                                                                        style={{ width: `${comp.data.values[i]}%` }}
+                                                                    />
+                                                                </div>
+                                                                <div className="w-8 text-xs text-neutral-400 text-right">{comp.data.values[i]}%</div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                        
+                                        return null;
+                                    })}
 
                                     {/* 3. Main Text Content */}
                                     <div className="prose prose-lg prose-neutral max-w-none text-neutral-800 font-serif leading-8">
@@ -296,14 +326,17 @@ export default function Home() {
                                     {/* 4. Citations */}
                                     {m.citations.length > 0 && (
                                         <div className="flex flex-wrap gap-2 pt-2">
-                                            {m.citations.map((page, idx) => (
+                                            {m.citations.map((cite, idx) => (
                                                 <button
                                                     key={idx}
-                                                    onClick={() => openPdf(page)}
+                                                    onClick={() => {
+                                                        setSearchText(cite.snippet); // <--- Sets text to highlight
+                                                        openPdf(cite.page);          // <--- Opens PDF
+                                                    }}
                                                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-50 border border-neutral-200 text-xs font-medium text-neutral-600 hover:border-teal-200 hover:text-teal-700 hover:bg-teal-50 transition-all"
                                                 >
                                                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                                    <span>Page {page}</span>
+                                                    <span>Page {cite.page}</span>
                                                 </button>
                                             ))}
                                         </div>

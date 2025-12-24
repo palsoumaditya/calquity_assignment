@@ -1,11 +1,16 @@
 import { create } from "zustand";
 
+export type Citation = {
+  page: number;
+  snippet: string;
+};
+
 export type Message = {
   role: "assistant" | "user";
   content: string;
   tools: string[];
-  citations: number[];
-  component?: { name: string; data: any }; // New field
+  citations: Citation[];
+  components: { name: string; data: any }[]; // Changed to array to support multiple components
 };
 
 type ChatState = {
@@ -16,8 +21,8 @@ type ChatState = {
   startAssistantMessage: () => void;
   appendText: (char: string) => void;
   addTool: (tool: string) => void;
-  addCitation: (page: number) => void;
-  addComponent: (component: { name: string; data: any }) => void; // New action
+  addCitation: (page: number, snippet: string) => void;
+  addComponent: (component: { name: string; data: any }) => void;
   setStreaming: (loading: boolean) => void;
   reset: () => void;
 };
@@ -30,7 +35,7 @@ export const useChatStore = create<ChatState>((set) => ({
     set((state) => ({
       messages: [
         ...state.messages,
-        { role: "user", content, tools: [], citations: [] },
+        { role: "user", content, tools: [], citations: [], components: [] },
       ],
     })),
 
@@ -38,7 +43,7 @@ export const useChatStore = create<ChatState>((set) => ({
     set((state) => ({
       messages: [
         ...state.messages,
-        { role: "assistant", content: "", tools: [], citations: [] },
+        { role: "assistant", content: "", tools: [], citations: [], components: [] },
       ],
     })),
 
@@ -60,12 +65,16 @@ export const useChatStore = create<ChatState>((set) => ({
       return { messages };
     }),
 
-  addCitation: (page) =>
+  addCitation: (page, snippet) =>
     set((state) => {
       const messages = [...state.messages];
       const lastMsg = messages[messages.length - 1];
-      if (lastMsg && !lastMsg.citations.includes(page)) {
-          lastMsg.citations.push(page);
+      if (lastMsg) {
+          // Avoid duplicates
+          const exists = lastMsg.citations.some((c) => c.page === page);
+          if (!exists) {
+             lastMsg.citations.push({ page, snippet });
+          }
       }
       return { messages };
     }),
@@ -74,7 +83,9 @@ export const useChatStore = create<ChatState>((set) => ({
     set((state) => {
       const messages = [...state.messages];
       const lastMsg = messages[messages.length - 1];
-      if (lastMsg) lastMsg.component = component;
+      if (lastMsg) {
+        lastMsg.components.push(component);
+      }
       return { messages };
     }),
 
