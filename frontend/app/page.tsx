@@ -1,21 +1,21 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useRef, useEffect, useState } from 'react'; // <--- ADDED useState
+import { motion } from 'framer-motion';
 import { Playfair_Display, Inter } from 'next/font/google';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useChatStore } from './store/useChatStore';
 import { usePdfStore } from './store/usePdfStore';
 import PdfViewer from '../app/components/PDFViewer';
 import ChatInput from '../app/components/ChatInput';
 
 // --- Typography ---
-// 1. Playfair: For the "Human/Editorial" feel of the answer
 const playfair = Playfair_Display({
   subsets: ['latin'],
   variable: '--font-playfair',
 });
 
-// 2. Inter: For the clean "System/UI" feel
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
@@ -38,6 +38,40 @@ export default function Home() {
 
   const { openPdf } = usePdfStore();
   const hasMessages = messages.length > 0;
+
+  // --- NEW: Upload State ---
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // --- NEW: Handle File Upload ---
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("http://127.0.0.1:8000/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        alert("✅ PDF Uploaded & Processed Successfully!");
+      } else {
+        alert("❌ Upload failed.");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("Error uploading file.");
+    } finally {
+      setIsUploading(false);
+      // Reset input so same file can be selected again if needed
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   // Auto-scroll logic
   useEffect(() => {
@@ -96,16 +130,6 @@ export default function Home() {
   return (
     <main className={`relative flex w-full h-screen overflow-hidden bg-white text-neutral-900 ${inter.variable} ${playfair.variable} font-sans`}>
       
-      {/* 1. TOP NAVIGATION */}
-      <header className="absolute top-0 left-0 w-full p-6 z-20 flex justify-between items-center pointer-events-none">
-        <div className="flex items-center gap-2 pointer-events-auto">
-           <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center text-white font-serif font-bold text-xl">
-             F
-           </div>
-           <span className="font-semibold text-lg tracking-tight">Fableframe</span>
-        </div>
-      </header>
-
       {/* 2. MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col h-full relative z-10 max-w-4xl mx-auto w-full">
         
@@ -118,9 +142,38 @@ export default function Home() {
                   What do you want to know?
                 </h1>
                 
-                <p className="text-neutral-500 text-lg max-w-lg mx-auto leading-relaxed">
-                  Upload a PDF to analyze contracts, research papers, or financial reports instantly.
-                </p>
+                {/* --- NEW: Upload Section --- */}
+                <div className="flex flex-col items-center gap-4">
+                  <p className="text-neutral-500 text-lg max-w-lg mx-auto leading-relaxed">
+                    Upload a PDF to analyze contracts, research papers, or financial reports instantly.
+                  </p>
+
+                  <input 
+                    type="file" 
+                    accept=".pdf"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleFileUpload}
+                  />
+
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-neutral-900 text-white rounded-full font-medium hover:bg-neutral-800 transition-all disabled:opacity-50 shadow-md hover:shadow-lg transform active:scale-95"
+                  >
+                    {isUploading ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                        Uploading...
+                      </span>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                        <span>Upload PDF</span>
+                      </>
+                    )}
+                  </button>
+                </div>
 
                 <div className="w-full pt-4">
                     <ChatInput 
@@ -149,7 +202,7 @@ export default function Home() {
              
              {/* Scrollable Message List */}
              <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 scroll-smooth pb-32">
-                <div className="max-w-3xl mx-auto space-y-8 pt-20">
+                <div className="max-w-3xl mx-auto space-y-8 pt-10">
                    {messages.map((m, i) => (
                       <motion.div 
                         key={i} 
@@ -212,13 +265,22 @@ export default function Home() {
                                     )}
 
                                     {/* 3. Main Text Content */}
-                                    <div className="prose prose-lg max-w-none text-neutral-800">
-                                        <p className="font-serif leading-8">
+                                    <div className="prose prose-lg prose-neutral max-w-none text-neutral-800 font-serif leading-8">
+                                        <ReactMarkdown 
+                                            remarkPlugins={[remarkGfm]}
+                                            components={{
+                                                p: ({children}) => (
+                                                    <p className="mb-4 last:mb-0">
+                                                        {children}
+                                                        {isStreaming && i === messages.length - 1 && (
+                                                            <span className="inline-block w-2 h-4 ml-1 bg-teal-500 animate-pulse rounded-sm align-middle" />
+                                                        )}
+                                                    </p>
+                                                )
+                                            }}
+                                        >
                                             {m.content}
-                                            {isStreaming && i === messages.length - 1 && (
-                                                <span className="inline-block w-2 h-4 ml-1 bg-teal-500 animate-pulse rounded-sm" />
-                                            )}
-                                        </p>
+                                        </ReactMarkdown>
                                     </div>
 
                                     {/* 4. Citations */}

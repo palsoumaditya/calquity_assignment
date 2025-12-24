@@ -8,18 +8,28 @@ from pdf import extract_pdf_text
 PDF_PATH = "sample.pdf"
 pdf_content = []
 
-def load_pdf_content():
+def load_pdf_content(specific_path: str = None):
+    """
+    Loads PDF content into memory.
+    If specific_path is provided, it loads that file.
+    Otherwise, it loads the default sample.pdf.
+    """
     global pdf_content
-    file_path = os.path.join(os.getcwd(), PDF_PATH)
+    # Use provided path or default to global PDF_PATH
+    file_path = specific_path if specific_path else os.path.join(os.getcwd(), PDF_PATH)
     
     if os.path.exists(file_path):
         try:
+            # Clear old content
             pdf_content = extract_pdf_text(file_path)
             print(f"✅ PDF Loaded: {len(pdf_content)} pages.")
+            return True
         except Exception as e:
             print(f"❌ Error reading PDF: {e}")
+            return False
     else:
-        print(f"❌ ERROR: 'sample.pdf' not found at {file_path}")
+        print(f"❌ ERROR: PDF not found at {file_path}")
+        return False
 
 def search_pdf(query: str) -> List[Dict]:
     results = []

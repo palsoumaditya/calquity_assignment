@@ -7,8 +7,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-// Fix worker source
-pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+// ---------------------------------------------------------
+// ✅ FIX: Use dynamic CDN to match the installed version
+// ---------------------------------------------------------
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 export default function PdfViewerClient() {
   const { isOpen, page, closePdf, setPage } = usePdfStore();
@@ -16,6 +18,8 @@ export default function PdfViewerClient() {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [scale, setScale] = useState<number>(1.0);
   const [containerWidth, setContainerWidth] = useState<number>(500);
+
+  // ... (keep the rest of your code exactly the same) ...
 
   // Reset scroll when page changes
   useEffect(() => {
@@ -94,7 +98,7 @@ export default function PdfViewerClient() {
           {/* --- PDF CONTENT --- */}
           <div className="flex-1 overflow-auto p-4 flex justify-center bg-gray-100/50" ref={containerRef}>
             <Document
-              file="/sample.pdf"
+              file="http://127.0.0.1:8000/get-pdf"
               onLoadSuccess={onDocumentLoadSuccess}
               className="shadow-xl"
               loading={
