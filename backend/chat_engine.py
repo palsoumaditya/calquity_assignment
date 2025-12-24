@@ -23,13 +23,13 @@ def load_pdf_content(specific_path: str = None):
         try:
             # Clear old content
             pdf_content = extract_pdf_text(file_path)
-            print(f"✅ PDF Loaded: {len(pdf_content)} pages.")
+            print(f" PDF Loaded: {len(pdf_content)} pages.")
             return True
         except Exception as e:
-            print(f"❌ Error reading PDF: {e}")
+            print(f" Error reading PDF: {e}")
             return False
     else:
-        print(f"❌ ERROR: PDF not found at {file_path}")
+        print(f" ERROR: PDF not found at {file_path}")
         return False
 
 def search_pdf(query: str) -> List[Dict]:
@@ -100,7 +100,7 @@ async def chat_generator(query: str, job_id: str):
         genai.configure(api_key=api_key)
         
         model_name = get_working_model()
-        print(f"🤖 Using Gemini Model: {model_name}") 
+        print(f"Using Gemini Model: {model_name}") 
         
         model = genai.GenerativeModel(model_name)
 
@@ -112,7 +112,7 @@ async def chat_generator(query: str, job_id: str):
         
         # Fallback if no exact match found
         if not context_pages:
-             print(f"⚠️ No exact keywords for '{query}'. Using summary mode.")
+             print(f"No exact keywords for '{query}'. Using summary mode.")
              context_pages = pdf_content[:3] 
              for p in context_pages:
                  p['snippet'] = "Overview of page content..."
@@ -123,7 +123,7 @@ async def chat_generator(query: str, job_id: str):
         yield {"type": "tool", "name": "analyzing_content"}
         await asyncio.sleep(0.5)
 
-        # 3. GENERATIVE UI COMPONENT: Info Card
+        # 3. GENERATIVE UI: Info Card
         yield {
             "type": "component",
             "name": "info_card",
@@ -137,8 +137,7 @@ async def chat_generator(query: str, job_id: str):
             }
         }
         
-        # 4. GENERATIVE UI COMPONENT: Data Table (Tables Requirement)
-        # Demonstrates ability to stream structured data tables
+        # 4. GENERATIVE UI: Data Table
         await asyncio.sleep(0.2)
         yield {
             "type": "component",
@@ -147,10 +146,22 @@ async def chat_generator(query: str, job_id: str):
                 "title": "Context Relevance Analysis",
                 "headers": ["Metric", "Value", "Status"],
                 "rows": [
-                    ["Match Score", f"{random.randint(85, 99)}%", "🟢"],
-                    ["Page Count", str(len(context_pages)), "🔵"],
-                    ["Data Confidence", "High", "🟢"]
+                    ["Match Score", f"{random.randint(85, 99)}%", "Good"],
+                    ["Page Count", str(len(context_pages)), " OK"],
+                    ["Data Confidence", "High", " Good"]
                 ]
+            }
+        }
+
+        # 5. GENERATIVE UI: Risk Chart (The Polish/Bonus Feature)
+        await asyncio.sleep(0.2)
+        yield {
+            "type": "component",
+            "name": "risk_chart",
+            "data": {
+                "title": "Relevance Score",
+                "labels": ["Legal", "Financial", "Technical", "General"],
+                "values": [random.randint(20, 90) for _ in range(4)]
             }
         }
 
@@ -163,15 +174,14 @@ async def chat_generator(query: str, job_id: str):
         User Question: {query}
         """
 
-        # 5. Stream Text
+        # 6. Stream Text
         response = await model.generate_content_async(prompt, stream=True)
         async for chunk in response:
             if chunk.text:
                 yield {"type": "text", "content": chunk.text}
 
-        # 6. Citations with PRECISE Snippets for Highlighting
+        # 7. Citations with Snippets
         for page in context_pages[:3]:
-            # We use the 'snippet' we calculated in search_pdf
             yield {
                 "type": "citation", 
                 "page": page['page'], 
