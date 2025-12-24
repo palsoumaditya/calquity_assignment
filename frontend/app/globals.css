@@ -1,3 +1,25 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  /* Subtle dot grid for a "technical/paper" feel */
+  .bg-dot-pattern {
+    background-image: radial-gradient(#d4d4d4 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  
+  /* Hide scrollbar for clean UI but allow scrolling */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Smooth scrolling for the whole app */
+html {
+  scroll-behavior: smooth;
+}

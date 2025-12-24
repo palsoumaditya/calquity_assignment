@@ -37,20 +37,14 @@ def search_pdf(query: str) -> List[Dict]:
             
     return sorted(results, key=lambda x: x['score'], reverse=True)[:3]
 
-# ---------------------------------------------------------
-# ✅ NEW: Function to automatically find a working model
-# ---------------------------------------------------------
 def get_working_model():
     """Finds the first model that supports content generation."""
     try:
-        # List all models available to your key
         for m in genai.list_models():
             if 'generateContent' in m.supported_generation_methods:
-                # Prefer Flash or Pro if available
                 if 'flash' in m.name or 'pro' in m.name:
                     return m.name
         
-        # If no specific one found, return the very first one that works
         for m in genai.list_models():
             if 'generateContent' in m.supported_generation_methods:
                 return m.name
@@ -58,7 +52,6 @@ def get_working_model():
     except Exception as e:
         print(f"Error listing models: {e}")
     
-    # Ultimate fallback
     return "gemini-pro"
 
 async def chat_generator(query: str, job_id: str):
@@ -74,13 +67,12 @@ async def chat_generator(query: str, job_id: str):
     try:
         genai.configure(api_key=api_key)
         
-        # ✅ Auto-select the correct model
         model_name = get_working_model()
-        print(f"🤖 Using Gemini Model: {model_name}") # Debug print
+        print(f"🤖 Using Gemini Model: {model_name}") 
         
         model = genai.GenerativeModel(model_name)
 
-        # 1. Searching
+        # 1. Searching Tool Event
         yield {"type": "tool", "name": "searching_documents"}
         await asyncio.sleep(0.5)
         
@@ -93,9 +85,23 @@ async def chat_generator(query: str, job_id: str):
 
         context_text = "\n\n".join([f"Page {p['page']}: {p['text']}" for p in context_pages])
         
-        # 2. Analyzing
+        # 2. Analyzing Tool Event
         yield {"type": "tool", "name": "analyzing_content"}
         await asyncio.sleep(0.5)
+
+        # 3. GENERATIVE UI COMPONENT (New)
+        yield {
+            "type": "component",
+            "name": "info_card",
+            "data": {
+                "title": "Document Analysis",
+                "details": [
+                    f"Scanned {len(pdf_content)} pages",
+                    f"Identified {len(context_pages)} relevant sections",
+                    "Synthesizing response based on context..."
+                ]
+            }
+        }
 
         prompt = f"""You are a helpful AI assistant. Answer based ONLY on the context below.
         Cite pages like [1] where possible.
@@ -106,13 +112,13 @@ async def chat_generator(query: str, job_id: str):
         User Question: {query}
         """
 
-        # 3. Stream Text
+        # 4. Stream Text
         response = await model.generate_content_async(prompt, stream=True)
         async for chunk in response:
             if chunk.text:
                 yield {"type": "text", "content": chunk.text}
 
-        # 4. Citations
+        # 5. Citations
         for page in context_pages[:3]:
             yield {"type": "citation", "page": page['page']}
 

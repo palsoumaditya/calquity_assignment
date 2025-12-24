@@ -5,6 +5,7 @@ export type Message = {
   content: string;
   tools: string[];
   citations: number[];
+  component?: { name: string; data: any }; // New field
 };
 
 type ChatState = {
@@ -16,6 +17,7 @@ type ChatState = {
   appendText: (char: string) => void;
   addTool: (tool: string) => void;
   addCitation: (page: number) => void;
+  addComponent: (component: { name: string; data: any }) => void; // New action
   setStreaming: (loading: boolean) => void;
   reset: () => void;
 };
@@ -62,10 +64,17 @@ export const useChatStore = create<ChatState>((set) => ({
     set((state) => {
       const messages = [...state.messages];
       const lastMsg = messages[messages.length - 1];
-      // Avoid duplicate citations for the same message
       if (lastMsg && !lastMsg.citations.includes(page)) {
           lastMsg.citations.push(page);
       }
+      return { messages };
+    }),
+
+  addComponent: (component) =>
+    set((state) => {
+      const messages = [...state.messages];
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg) lastMsg.component = component;
       return { messages };
     }),
 
